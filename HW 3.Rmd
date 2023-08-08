@@ -1,0 +1,492 @@
+---
+title: "HW 3"
+author: "Claudia"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r}
+getwd()
+setwd("C:/Users/claud/OneDrive/Desktop/spr 2022/HS 614 data analytics")
+```
+```{r}
+#Import dataset
+diabetes<-read.csv("./data/diabetes.csv",header = TRUE, sep = ",")
+```
+
+```{r}
+#1. Explore the data
+head(diabetes)
+str(diabetes)
+```
+```{r}
+#6. Statistics of the columns
+summary(diabetes)
+```
+```{r}
+#3. Check for NA's
+any(is.na(diabetes))
+```
+
+```{r}
+#2. Number of rows and columns
+nrow(diabetes)
+ncol(diabetes)
+```
+```{r}
+#Change outcome variable to factor
+diabetes$Outcome<-as.factor(diabetes$Outcome)
+```
+
+```{r}
+#change variables to numeric(glucose, BP, skin thickness, insulin, BMI)
+diabetes$Glucose <- as.numeric(diabetes$Glucose) 
+diabetes$BloodPressure <- as.numeric(diabetes$BloodPressure) 
+diabetes$SkinThickness <- as.numeric(diabetes$SkinThickness) 
+diabetes$Insulin <- as.numeric(diabetes$Insulin) 
+```
+
+```{r}
+str(diabetes)
+```
+##Exploratory plots
+```{r}
+#histogram for Pregnancies variable
+library(ggplot2)
+ggplot(diabetes,aes(x=Pregnancies))+ geom_histogram(binwidth=2,color='black',fill='#7cffca')
+```
+
+```{r}
+#histogram for Glucose variable
+library(ggplot2)
+ggplot(diabetes,aes(x=Glucose))+ geom_histogram(binwidth=3,color='red',fill='pink')
+```
+```{r}
+#histogram for BP variable
+library(ggplot2)
+ggplot(diabetes,aes(x=BloodPressure))+ geom_histogram(binwidth=3,color='black',fill='#f6b26b')
+```
+```{r}
+#histogram for skin thickness variable
+library(ggplot2)
+ggplot(diabetes,aes(x=SkinThickness))+ geom_histogram(binwidth=3,color='black',fill='#6fa8dc')
+```
+```{r}
+#histogram for insulin variable
+library(ggplot2)
+ggplot(diabetes,aes(x=Insulin))+ geom_histogram(binwidth=25,color='black',fill='#B006F9')
+```
+
+```{r}
+#histogram for BMI variable
+library(ggplot2)
+ggplot(diabetes,aes(x=BMI))+ geom_histogram(binwidth=2,color='black',fill='#EB3DDB')
+```
+
+```{r}
+#histogram for diabetes pedigree function variable
+library(ggplot2)
+ggplot(diabetes,aes(x=DiabetesPedigreeFunction))+ geom_histogram(binwidth=0.1,color='black',fill='#f1c232')
+```
+
+```{r}
+#histogram for age variable
+library(ggplot2)
+ggplot(diabetes,aes(x=Age))+ geom_histogram(binwidth=2,color='black',fill='#c90076')
+```
+
+```{r}
+#barplot for outcome variable
+library(dplyr)
+library(ggplot2)
+df <- diabetes %>%
+		  filter(!is.na(Outcome)) %>%  
+		  group_by(Outcome) %>%
+  summarise(count_m= n())
+		p <-ggplot(df, aes(x = Outcome, y = count_m)) +
+		  geom_bar(fill = "#B006F9", stat = "identity") +
+		  geom_text(aes(label = count_m), vjust = -0.25,size = 4) + 
+		  theme(axis.text = element_text(colour = "blue"),text = element_text(size=10),axis.line = element_line(size = 4, colour = "grey80"),axis.text.x = element_text(angle = 90, vjust = 0.45, hjust=1)) + ylab("Positive for Diabetes") + xlab("Diabetes") + ggtitle(labs(title = "Distribution of Diabetes"))
+p
+```
+```{r}
+#density plot of Age and diabetes
+ggplot(data = diabetes,aes(x=Age,fill= Outcome))+ geom_density(alpha = 0.9,cex=1)+ggtitle(labs(title = "Distribution of Age by diabetes"))+theme(text = element_text(size=10))
+```
+```{r}
+##density plot of glucose and diabetes
+ggplot(data = diabetes,aes(x=Glucose,fill= Outcome))+ geom_density(alpha = 0.9,cex=1)+ggtitle(labs(title = "Distribution of Glucose by diabetes"))+theme(text = element_text(size=10))
+```
+
+```{r}
+#correlation
+library(GGally)
+ggpairs(diabetes)
+```
+
+
+```{r}
+#count number of missing values
+sapply(diabetes,function(x)sum(x==0))
+```
+
+```{r}
+#replace 0's with NA's for missing values(0's in glucose, BP, skin thickness, insulin, BMI)
+diabetes$Glucose[diabetes$Glucose==0]<-NA
+diabetes$BloodPressure[diabetes$BloodPressure==0]<-NA
+diabetes$SkinThickness[diabetes$SkinThickness==0]<-NA
+diabetes$Insulin[diabetes$Insulin==0]<-NA
+diabetes$BMI[diabetes$BMI==0]<-NA
+```
+
+```{r}
+#count number of NA's
+sum(is.na(diabetes$Glucose))
+sum(is.na(diabetes$BloodPressure))
+sum(is.na(diabetes$SkinThickness))
+sum(is.na(diabetes$Insulin))
+sum(is.na(diabetes$BMI))
+```
+```{r}
+#install.packages('Amelia')
+library(Amelia)
+missmap(diabetes,main='Missing Map',col=c('blue','red'))
+```
+
+
+```{r}
+#train test split before going further
+library(caTools)
+set.seed(123)
+split <- sample.split(diabetes$Outcome, SplitRatio=0.7)
+diabetes.train <- subset(diabetes, split==TRUE,stringsAsFactors=TRUE)
+diabetes.test <- subset(diabetes, split==FALSE)
+```
+
+
+```{r}
+#compute average for variables with missing values
+colMeans(diabetes.train[,2:6],na.rm=T)
+```
+```{r}
+#imputation for missing values(using average)
+diabetes.train$Glucose[is.na(diabetes.train$Glucose)]<-mean(diabetes.train$Glucose,na.rm=T)
+diabetes.train$BloodPressure[is.na(diabetes.train$BloodPressure)]<-mean(diabetes.train$BloodPressure,na.rm=T)
+diabetes.train$SkinThickness[is.na(diabetes.train$SkinThickness)]<-mean(diabetes.train$SkinThickness,na.rm=T)
+diabetes.train$Insulin[is.na(diabetes.train$Insulin)]<-mean(diabetes.train$Insulin,na.rm=T)
+diabetes.train$BMI[is.na(diabetes.train$BMI)]<-mean(diabetes.train$BMI,na.rm=T)
+```
+
+
+```{r}
+missmap(diabetes.train,main='Imputation',col=c('blue','red'))
+```
+
+```{r}
+#Statistics of the columns after imputation
+summary(diabetes.train)
+```
+##Predictive models
+```{r}
+#logistic regression
+log.model.1 <- glm(formula=Outcome ~ . , family=binomial,data = diabetes.train)
+```
+
+```{r}
+summary(log.model.1)
+```
+```{r}
+#variable importance for logistic regression
+library(caret)
+importance<-varImp(log.model.1, scale=FALSE)
+importance
+```
+
+```{r}
+log.model.2 <- glm(formula=Outcome ~ Glucose+BMI , family=binomial,data = diabetes.train)
+```
+```{r}
+summary(log.model.2)
+```
+```{r}
+#compute average for variables with missing values
+colMeans(diabetes.test[,2:6],na.rm=T)
+```
+
+```{r}
+#prediction using test data
+diabetes.test$Glucose[is.na(diabetes.test$Glucose)]<-mean(diabetes.train$Glucose,na.rm=T)
+diabetes.test$BloodPressure[is.na(diabetes.test$BloodPressure)]<-mean(diabetes.train$BloodPressure,na.rm=T)
+diabetes.test$SkinThickness[is.na(diabetes.test$SkinThickness)]<-mean(diabetes.train$SkinThickness,na.rm=T)
+diabetes.test$Insulin[is.na(diabetes.test$Insulin)]<-mean(diabetes.train$Insulin,na.rm=T)
+diabetes.test$BMI[is.na(diabetes.test$BMI)]<-mean(diabetes.train$BMI,na.rm=T)
+```
+```{r}
+#count number of NA's in test data
+sum(is.na(diabetes.test$Glucose))
+sum(is.na(diabetes.test$BloodPressure))
+sum(is.na(diabetes.test$SkinThickness))
+sum(is.na(diabetes.test$Insulin))
+sum(is.na(diabetes.test$BMI))
+```
+```{r}
+#Statistics of test data after imputation
+summary(diabetes.test)
+```
+
+
+```{r}
+results = predict(log.model.1, diabetes.test, type='response')
+results
+```
+```{r}
+results_class <- ifelse(results>0.5, 1,0)
+results_class
+```
+```{r}
+table(diabetes.test$Outcome, results_class)
+```
+
+
+```{r}
+#accuracy
+misClasificError <- mean(results_class != diabetes.test$Outcome)
+print(paste('Accuracy',1-misClasificError))
+```
+```{r}
+#sensitivity=TP/TP+FN
+sensitivity=47/(47+33)
+sensitivity
+#spec=TN/TN+FP
+spec=127/(127+23)
+spec
+```
+
+```{r}
+library(pROC)
+```
+
+```{r}
+roc(diabetes.test$Outcome, results, plot=TRUE,)
+```
+```{r}
+auc(diabetes.test$Outcome, results)
+```
+
+```{r}
+# Feature Scaling
+library(caret)
+normParam <- preProcess(diabetes.train, method = c("center", "scale"))
+diabetes.train <- predict(normParam, diabetes.train)
+diabetes.test <- predict(normParam, diabetes.test)
+```
+
+
+```{r}
+# Fitting SVM to the Training set
+#install.packages('e1071')
+library(e1071)
+classifier = svm(formula = Outcome ~ .,
+                 data = diabetes.train,
+                 kernel = 'linear')
+
+# Predicting the Test set results
+y_pred = predict(classifier, newdata = diabetes.test[-9])
+print(y_pred)
+# Making the Confusion Matrix
+cm = table(diabetes.test[, 9], y_pred)
+cm
+```
+
+```{r}
+confusionMatrix(diabetes.test[, 9], y_pred)
+```
+```{r}
+# Fitting SVM to the Training set
+# install.packages('e1071')
+library(e1071)
+classifier = svm(formula = Outcome ~ .,
+                 data = diabetes.train,
+                 kernel = 'radial')
+
+# Predicting the Test set results
+y_pred = predict(classifier, newdata = diabetes.test[-9])
+
+# Making the Confusion Matrix
+cm = table(diabetes.test[, 9], y_pred)
+summary(classifier)
+```
+
+```{r}
+confusionMatrix(diabetes.test[, 9], y_pred)
+```
+```{r}
+summary(classifier)
+```
+
+```{r}
+#tuning
+tune.results <- tune(svm,train.x=diabetes.train[,-9],train.y=diabetes.train[,9],kernel='radial',
+                  ranges=list(cost=10^(-1:2), gamma=c(0.25,.5,1,2)))
+```
+
+```{r}
+summary(tune.results)
+```
+
+```{r}
+classifier = svm(formula = Outcome ~ .,
+                 data = diabetes.train,
+                 type = 'C-classification',
+                 kernel = 'radial',
+                 cost=1,
+                 gamma=0.25)
+
+# Predicting the Test set results
+y_pred = predict(classifier, newdata = diabetes.test[-9])
+
+# Making the Confusion Matrix
+cm = table(diabetes.test[, 9], y_pred)
+cm
+```
+```{r}
+confusionMatrix(diabetes.test[, 9], y_pred)
+```
+```{r}
+summary(classifier)
+```
+```{r}
+#knn
+library(class)
+y_pred = knn(train = diabetes.train[, -9],
+             test = diabetes.test[, -9],
+             cl = diabetes.train[, 9],
+             k = 5)
+
+y_pred
+```
+```{r}
+# Fitting KNN to the Training set and Predicting the Test set results
+library(class)
+vec = c()
+k_vec = c()
+for (k in 1:50){
+y_pred = knn(train = diabetes.train[, -9],
+             test = diabetes.test[, -9],
+             cl = diabetes.train[, 9],
+             k = 16)
+y_pred
+
+error = mean(y_pred != diabetes.test$Outcome)
+k_vec = c(k_vec, k)
+vec = c(vec, error)}
+```
+
+```{r}
+vec
+```
+```{r}
+df.error = data.frame(k_vec,vec)
+df.error
+```
+```{r}
+ggplot(df.error, aes(k_vec, vec))+geom_line()
+```
+```{r}
+y_pred = knn(train = diabetes.train[, -9],
+             test = diabetes.test[, -9],
+             cl = diabetes.train[, 9],
+             k = 20)
+
+y_pred
+
+# Making the Confusion Matrix
+cm = table(diabetes.test[, 9], y_pred)
+cm
+```
+```{r}
+confusionMatrix(diabetes.test[, 9], y_pred)
+```
+```{r}
+#decision tree
+library(rpart)
+tree=rpart(formula=Outcome ~ ., method='class',
+                 data = diabetes.train)
+```
+
+```{r}
+# Predicting the Test set results
+y_pred = predict(tree, newdata = diabetes.test)
+y_pred
+```
+
+```{r}
+y_pred_class = ifelse(y_pred[,'0']>=0.5, 0,1)
+```
+
+```{r}
+# Making the Confusion Matrix
+cm = table(diabetes.test$Outcome, y_pred_class)
+cm
+```
+
+```{r}
+y_pred_class_fac = factor(y_pred_class)
+```
+
+```{r}
+confusionMatrix(diabetes.test$Outcome, y_pred_class_fac)
+```
+
+```{r}
+printcp(tree)
+```
+```{r}
+plot(tree, uniform=TRUE, main="Main Title")
+text(tree, use.n=TRUE, all=TRUE)
+```
+
+```{r}
+#install.packages('rpart.plot')
+library(rpart.plot)
+prp(tree)
+```
+
+```{r}
+#random forest
+#install.packages('randomForest')
+library(randomForest)
+```
+```{r}
+RF <- randomForest(formula = Outcome ~ ., method='class',
+                 data = diabetes.train)
+print(RF)
+```
+```{r}
+importance(RF)
+```
+```{r}
+#MeanDecreaseGin --> Importance (IncNodePurity)
+diabetes.test[-9]
+```
+
+```{r}
+# Predicting the Test set results
+y_pred = predict(RF, newdata = diabetes.test)
+```
+
+```{r}
+confusionMatrix(diabetes.test[, 9], y_pred)
+```
+
+##Conclusion
+```{r}
+#The winning model to predict Type 2 diabetes is KNN due to high accuracy and sensitivity(true positive rate).From the variable importance, glucose and BMI are the most important factors in predicting Type 2 diabetes.
+```
+
