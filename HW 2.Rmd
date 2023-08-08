@@ -1,0 +1,444 @@
+---
+title: "HW 2"
+author: "Claudia"
+date: "3/3/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+Attribute Domain:
+Sample code number id number
+Clump Thickness 1 - 10
+Uniformity of Cell Size 1 - 10
+Uniformity of Cell Shape 1 - 10
+Marginal Adhesion 1 - 10
+Single Epithelial Cell Size 1 - 10
+Bare Nuclei 1 - 10
+Bland Chromatin 1 - 10
+Normal Nucleoli 1 - 10
+Mitoses 1 - 10
+Class: (2 for benign, 4 for malignant)
+
+```{r}
+# https://archive.ics.uci.edu/ml/datasets/breast+cancer+wisconsin+(original)
+url = "https://archive.ics.uci.edu/ml/machine-learning-databases/breast-cancer-wisconsin/breast-cancer-wisconsin.data"
+names = c('id', 'clump_thickness', 'uniform_cell_size', 'uniform_cell_shape',
+       'marginal_adhesion', 'single_epithelial_size', 'bare_nuclei',
+       'bland_chromatin', 'normal_nucleoli', 'mitoses', 'class')
+df = read.csv(url, col.names=names)
+```
+
+```{r}
+getwd()
+setwd("C:/Users/claud/OneDrive/Desktop/spr 2022/HS 614 data analytics/week 6")
+```
+```{r}
+df
+```
+```{r}
+nrow(df)
+ncol(df)
+```
+
+```{r}
+head(df)
+```
+```{r}
+summary(df)
+```
+```{r}
+str(df)
+```
+```{r}
+any(is.na(df))
+```
+```{r}
+df$class = factor(df$class, levels=c(2,4), label=c(0,1))
+```
+
+```{r}
+df$bare_nuclei<-as.factor(df$bare_nuclei)
+```
+```{r}
+str(df)
+```
+```{r}
+table(df$bare_nuclei)
+```
+```{r}
+df = subset(df, df$bare_nuclei!="?")
+```
+
+```{r}
+table(df$bare_nuclei)
+```
+```{r}
+df$bare_nuclei = as.integer(df$bare_nuclei)
+```
+
+```{r}
+str(df)
+```
+```{r}
+sum(is.na(df))
+```
+```{r}
+df = df[,-1]
+```
+
+```{r}
+str(df)
+```
+
+
+```{r}
+library(GGally)
+```
+
+##EDA
+```{r}
+ggpairs(df)
+```
+```{r}
+# Grab only numeric columns
+num.cols <- sapply(df, is.numeric)
+
+# Filter to numeric columns for correlation
+cor.data <- cor(df[,num.cols])
+
+cor.data
+```
+```{r}
+# install.packages("corrgram")
+```
+```{r}
+library(corrplot)
+library(corrgram)
+```
+```{r}
+corrplot(cor.data,method='color',addCoef.col = "pink")
+```
+```{r}
+corrgram(df,order=TRUE, lower.panel=panel.shade,
+  upper.panel=panel.pie)
+```
+
+
+```{r}
+table(df$class)
+```
+
+
+
+```{r}
+#install.packages('Amelia')
+```
+
+```{r}
+library(Amelia)
+missmap(df,main='Missing Map',col=c('blue','red'))
+```
+
+```{r}
+library(ggplot2)
+```
+
+```{r}
+ggplot(df, aes(x = class, fill = class)) +
+  geom_bar()+ geom_text(stat='Count',aes(label=..count..))
+```
+
+```{r}
+ggplot(df, aes(bland_chromatin)) + geom_bar(aes(fill=factor(class)))
+```
+
+```{r}
+ggplot(df, aes(marginal_adhesion)) + geom_histogram(aes(fill=factor(class)))
+```
+
+```{r}
+ggplot(df, aes(mitoses)) + geom_histogram(aes(fill=factor(class)))
+```
+##Logistic Regression
+```{r}
+str(df)
+```
+```{r}
+library(dplyr)
+```
+```{r}
+# Splitting the dataset into the Training set and Test set
+library(caTools)
+set.seed(120)
+
+split = sample.split(df$class, SplitRatio = 0.80)
+
+df.train = subset(df, split == TRUE)
+df.test = subset(df, split == FALSE)
+```
+
+```{r}
+nrow(df.train)
+```
+```{r}
+nrow(df.test)
+```
+
+```{r}
+#change into factor
+df.train$clump_thickness<-as.factor(df.train$clump_thickness)
+df.train$uniform_cell_shape<-as.factor(df.train$uniform_cell_shape)
+df.train$bland_chromatin<-as.factor(df.train$bland_chromatin)
+df.train$class<-as.factor(df.train$class)
+head(df.train)
+```
+
+
+```{r}
+str(df.train)
+```
+```{r}
+log.model<-glm(class~.,family=binomial,data=df.train)
+```
+
+```{r}
+summary(log.model)
+```
+
+```{r}
+log.model<-glm(class~clump_thickness+uniform_cell_shape+marginal_adhesion,family=binomial,data=df.train)
+```
+
+
+```{r}
+summary(log.model)
+```
+```{r}
+log.model<-glm(class~uniform_cell_shape+marginal_adhesion,family=binomial,data=df.train)
+```
+
+```{r}
+summary(log.model)
+```
+```{r}
+head(df.test)
+```
+```{r}
+#change into factor
+df.test$clump_thickness<-as.factor(df.test$clump_thickness)
+df.test$uniform_cell_shape<-as.factor(df.test$uniform_cell_shape)
+df.test$bland_chromatin<-as.factor(df.test$bland_chromatin)
+df.test$class<-as.factor(df.test$class)
+```
+
+```{r}
+results = predict(log.model, df.test, type='response')
+results
+```
+```{r}
+results_class <- ifelse(results>0.5, 1,0)
+results_class
+```
+```{r}
+table(df.test$class, results_class)
+```
+
+```{r}
+acc=(43+88)/(43+88+1+5)
+acc
+#sensitivity=TP/TP+FN
+sensitivity=43/(43+5)
+sensitivity
+#spec=TN/TN+FP
+spec=88/(88+1)
+spec
+```
+```{r}
+results_class <- ifelse(results>0.2, 1,0)
+table(df.test$class, results_class)
+```
+```{r}
+results_class <- ifelse(results>0.8, 1,0)
+table(df.test$class, results_class)
+```
+
+
+```{r}
+library(pROC)
+```
+```{r}
+roc(df.test$class, results, plot=TRUE,)
+```
+```{r}
+auc(df.test$class, results)
+```
+
+
+##KNN
+```{r}
+#feature scaling
+library(caret)
+normParam <- preProcess(df.train, method = c("center", "scale"))
+df.train <- predict(normParam, df.train)
+df.test<- predict(normParam, df.test)
+```
+
+
+```{r}
+# Fitting KNN to the Training set and Predicting the Test set results
+library(class)
+vec = c()
+k_vec = c()
+for (k in 1:50){
+y_pred = knn(train = df.train[, -10],
+             test = df.test[, -10],
+             cl = df.train[, 10],
+             k = 3)
+y_pred
+
+error = mean(y_pred != df.test$class)
+k_vec = c(k_vec, k)
+vec = c(vec, error)}
+```
+
+```{r}
+vec
+```
+
+```{r}
+df.error = data.frame(k_vec,vec)
+df.error
+```
+
+```{r}
+ggplot(df.error, aes(k_vec, vec))+geom_line()
+```
+
+```{r}
+y_pred = knn(train = df.train[, -10],
+             test = df.test[, -10],
+             cl = df.train[, 10],
+             k = 7)
+
+# Making the Confusion Matrix
+cm = table(df.test[, 10], y_pred)
+cm
+```
+
+```{r}
+library(caret)
+#install.packages('e1071')
+library(e1071)
+```
+```{r}
+confusionMatrix(df.test[, 10], y_pred)
+```
+```{r}
+y_pred = knn(train = df.train[, -10],
+             test = df.test[, -10],
+             cl = df.train[, 10],
+             k = 5)
+confusionMatrix(df.test[, 10], y_pred)
+```
+
+##SVM
+```{r}
+str(df.train)
+str(df.test)
+```
+
+```{r}
+df.train.new<-subset(df.train, select = - c(clump_thickness, uniform_cell_shape,bland_chromatin))  
+df.test.new<-subset(df.test, select = - c(clump_thickness, uniform_cell_shape,bland_chromatin))  
+```
+
+```{r}
+df.train.new
+df.test.new
+```
+
+```{r}
+# Fitting SVM to the Training set
+#install.packages('e1071')
+library(e1071)
+classifier = svm(formula = class ~ .,
+                 data = df.train.new,
+                 kernel = 'linear')
+# Predicting the Test set results
+y_pred = predict(classifier, newdata = df.test.new[-7])
+print(y_pred)
+# Making the Confusion Matrix
+cm = table(df.test.new[, 7], y_pred)
+cm
+```
+
+
+```{r}
+nrow(df.train.new)
+nrow(df.test.new)
+```
+```{r}
+library(caret)
+confusionMatrix(df.test.new[, 7], y_pred)
+```
+```{r}
+# Fitting SVM to the Training set
+# install.packages('e1071')
+library(e1071)
+classifier = svm(formula = class ~ .,
+                 data = df.train.new,
+                 kernel = 'radial')
+# Predicting the Test set results
+y_pred = predict(classifier, newdata = df.test.new[-7])
+# Making the Confusion Matrix
+cm = table(df.test[, 7], y_pred)
+cm
+summary(classifier)
+```
+
+
+
+```{r}
+confusionMatrix(df.test.new[, 7], y_pred)
+```
+
+```{r}
+summary(classifier)
+```
+
+```{r}
+tune.results <- tune(svm,train.x=df.train.new[,-7],train.y=df.train.new[,7],kernel='radial',
+                  ranges=list(cost=10^(-1:2), gamma=c(0.25,.5,1,2)))
+```
+
+```{r}
+summary(tune.results)
+```
+```{r}
+classifier = svm(formula = class~ .,
+                 data = df.train.new,
+                 type = 'C-classification',
+                 kernel = 'radial',
+                 cost=100,
+                 gamma=0.5)
+
+# Predicting the Test set results
+y_pred = predict(classifier, newdata = df.test.new[-7])
+
+# Making the Confusion Matrix
+cm = table(df.test.new[, 7], y_pred)
+cm
+```
+
+```{r}
+confusionMatrix(df.test.new[, 7], y_pred)
+```
+
+```{r}
+summary(classifier)
+```
